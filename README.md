@@ -25,3 +25,12 @@ python -m walldeck --watch
 ```
 
 設定は `%LOCALAPPDATA%\WallDeck\config.json` に保存されます。
+
+## Windows実行ファイルの作成
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[build]"
+.\.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm packaging\WallDeck.spec
+```
+
+単一ファイルの実行可能ファイルが `dist\WallDeck.exe` に生成されます。

@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -105,32 +106,38 @@ class MainWindow(QMainWindow):
         form = QFormLayout()
         form.addRow("モニター情報", self.info_label)
         form.addRow("壁紙", self.path_edit)
-        form.addRow("表示方法", self.position_combo)
 
         self.refresh_button = QPushButton("再検出")
         self.refresh_button.clicked.connect(self.refresh)
-        self.apply_button = QPushButton("現在のデスクトップへ適用")
+        self.apply_button = QPushButton("現在のデスクトップ設定を再適用")
         self.apply_button.clicked.connect(self.controller.queue_apply)
 
-        bottom_buttons = QHBoxLayout()
-        bottom_buttons.addWidget(self.refresh_button)
-        bottom_buttons.addStretch()
-        bottom_buttons.addWidget(self.apply_button)
+        common_group = QGroupBox("共通設定・操作")
+        common_layout = QHBoxLayout(common_group)
+        common_layout.addWidget(QLabel("表示方法"))
+        common_layout.addWidget(self.position_combo)
+        common_layout.addStretch()
+        common_layout.addWidget(self.refresh_button)
+        common_layout.addWidget(self.apply_button)
 
-        editor = QWidget()
+        editor = QGroupBox("モニター個別設定")
         editor_layout = QVBoxLayout(editor)
         editor_layout.addWidget(self.title_label)
         editor_layout.addWidget(self.preview, 1)
         editor_layout.addLayout(form)
         editor_layout.addLayout(buttons)
-        editor_layout.addLayout(bottom_buttons)
 
         splitter = QSplitter()
         splitter.addWidget(self.tree)
         splitter.addWidget(editor)
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
-        self.setCentralWidget(splitter)
+
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.addWidget(common_group)
+        container_layout.addWidget(splitter, 1)
+        self.setCentralWidget(container)
 
     def refresh(self) -> None:
         selection = self._selected_ids()
