@@ -4,15 +4,29 @@ from __future__ import annotations
 
 import sys
 
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QApplication, QMenu, QStyle, QSystemTrayIcon
 
 from walldeck.config import ConfigRepository
 from walldeck.controller import RuntimeController
+from walldeck.single_instance import SingleInstance
+from walldeck.startup import update_registered_startup_command
 from walldeck.ui import MainWindow
 
 
 def run_app() -> int:
+    instance = SingleInstance()
+    if not instance.is_primary:
+        instance.notify_primary()
+        instance.close()
+        return 0
+
+    try:
+        update_registered_startup_command()
+    except OSError:
+        pass
+
     application = QApplication.instance() or QApplication(sys.argv)
     application.setApplicationName("WallDeck")
     application.setQuitOnLastWindowClosed(False)
@@ -53,6 +67,13 @@ def run_app() -> int:
         tray.hide()
         application.quit()
 
+    activation_timer = QTimer(application)
+    activation_timer.setInterval(150)
+    activation_timer.timeout.connect(
+        lambda: show_window() if instance.activation_requested() else None
+    )
+    activation_timer.start()
+
     tray.activated.connect(
         lambda reason: show_window()
         if reason == QSystemTrayIcon.ActivationReason.DoubleClick
@@ -65,6 +86,7 @@ def run_app() -> int:
         )
     )
     application.aboutToQuit.connect(controller.stop)
+    application.aboutToQuit.connect(instance.close)
 
     tray.show()
     window.show()

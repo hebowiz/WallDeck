@@ -8,6 +8,7 @@ from PySide6.QtCore import QTimer, Qt
 from PySide6.QtGui import QCloseEvent, QPixmap
 from PySide6.QtWidgets import (
     QComboBox,
+    QCheckBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -26,6 +27,11 @@ from PySide6.QtWidgets import (
 
 from walldeck.config import ConfigRepository
 from walldeck.controller import RuntimeController
+from walldeck.startup import (
+    is_startup_registered,
+    set_startup_enabled,
+    startup_command,
+)
 from walldeck.virtual_desktops import read_virtual_desktop_snapshot
 from walldeck.wallpaper import (
     MonitorWallpaper,
@@ -103,6 +109,11 @@ class MainWindow(QMainWindow):
             self.position_combo.addItem(position.name.title(), position)
         self.position_combo.currentIndexChanged.connect(self._position_changed)
 
+        self.startup_checkbox = QCheckBox("Windowsログイン時にWallDeckを起動")
+        self.startup_checkbox.setChecked(is_startup_registered())
+        self.startup_checkbox.setToolTip(startup_command())
+        self.startup_checkbox.toggled.connect(self._startup_changed)
+
         form = QFormLayout()
         form.addRow("モニター情報", self.info_label)
         form.addRow("壁紙", self.path_edit)
@@ -116,6 +127,8 @@ class MainWindow(QMainWindow):
         common_layout = QHBoxLayout(common_group)
         common_layout.addWidget(QLabel("表示方法"))
         common_layout.addWidget(self.position_combo)
+        common_layout.addSpacing(16)
+        common_layout.addWidget(self.startup_checkbox)
         common_layout.addStretch()
         common_layout.addWidget(self.refresh_button)
         common_layout.addWidget(self.apply_button)
@@ -306,6 +319,22 @@ class MainWindow(QMainWindow):
         position = self.position_combo.itemData(index)
         if isinstance(position, WallpaperPosition):
             self.controller.set_position(position)
+
+    def _startup_changed(self, enabled: bool) -> None:
+        try:
+            set_startup_enabled(enabled)
+        except OSError as error:
+            self.startup_checkbox.blockSignals(True)
+            self.startup_checkbox.setChecked(is_startup_registered())
+            self.startup_checkbox.blockSignals(False)
+            self._show_error(f"スタートアップ設定を変更できません: {error}")
+            return
+        message = (
+            "Windowsログイン時の自動起動を有効にしました"
+            if enabled
+            else "Windowsログイン時の自動起動を無効にしました"
+        )
+        self.statusBar().showMessage(message)
 
     def _show_error(self, message: str) -> None:
         self.statusBar().showMessage(message)
